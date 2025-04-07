@@ -95,6 +95,7 @@ Rust 可以在編譯時防止 race condition (競爭條件)。
 - 編譯器為 function 的每個 reference 參數指派一個 lifetime 參數 `'a`
 - 如果 function 輸入只有一個 lifetime 參數，則該 lifetime 將指派給所有輸出 lifetime 參數
 - 如果 function 的多個輸入中包含 `&self` 或 `&mut self`，則 `self` 被指派給所有輸出 lifetime 參數
+- `&'static` 靜態生命週期的 reference，資料會存活整個程式期間
 
 
 ## Trivial Concept
@@ -116,3 +117,8 @@ Rust 可以在編譯時防止 race condition (競爭條件)。
 - 使用 `RUST_BACKTRACE=1` 來顯示 `cargo run` 的錯誤調試訊息
 
 - panic 處理方法可以使用 `unwrap()` 或是 `expect()`
+
+- `Box<dyn Error>` 回傳任何錯誤的方法
+  - 不能**靜態確定**，只能在運作時知道
+  - `Box<T>` 是 Heap 分配的 pointer
+  - `dyn Error` 代表實作任何 `Error` trait 的錯誤型別

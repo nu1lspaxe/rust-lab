@@ -23,6 +23,18 @@
   cargo doc --open
   ```
 
+## Cargo
+
+- `cargo build` 使用 `dev` 設定檔、`cargo build --release` 使用 `release` 設定檔
+- 從 `Cargo.toml` 中設定 `[profile.*]`
+  ```toml
+  [profile.dev]
+  opt-level = 0
+  [profile.release]
+  opt-level = 3
+  ```
+- 用 `cargo publish` 可以發布 crate，關於 crate 的[文件註解方式](https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html)
+
 ## Ownership
 
 藉由 ownership 特性，Rust 不需要垃圾收集器就能保證記憶體安全。
@@ -97,6 +109,9 @@ Rust 可以在編譯時防止 race condition (競爭條件)。
 - 如果 function 的多個輸入中包含 `&self` 或 `&mut self`，則 `self` 被指派給所有輸出 lifetime 參數
 - `&'static` 靜態生命週期的 reference，資料會存活整個程式期間
 
+## Smart Pointers
+
+Smart Pointer 除了像 reference poitner 一樣運作外，還具有 metadata 和其他功能，並且擁有 pointer 指向的資料。 
 
 ## Trivial Concept
 

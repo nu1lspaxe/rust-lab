@@ -1,5 +1,9 @@
-use trpl::Html;
-use std::time::Duration;
+use trpl::{Html, Either};
+use std::{
+    pin::{pin, Pin},
+    future::Future,
+    time::{Duration, Instant},
+};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -112,6 +116,112 @@ fn main() {
 
         trpl::join(tx_fut, rx_fut).await;
     });
+
+    println!("-----------------");
+    trpl::run(async {
+        let (tx, mut rx) = trpl::channel();
+
+        let tx1 = tx.clone();
+        let tx1_fut = pin!(async move {
+            let vals = vec!["hello", "world", "from", "trpl"];
+
+            for val in vals {
+                tx1.send(val).unwrap();
+                trpl::sleep(Duration::from_millis(100)).await;
+            }
+        });
+
+        let rx_fut = pin!(async {
+            while let Some(value) = rx.recv().await {
+                println!("Received: {}", value);
+            }
+        });
+
+        let tx_fut = pin!(async move {
+            let vals = vec!["hello", "world", "from", "trpl"];
+
+            for val in vals {
+                tx.send(val).unwrap();
+                trpl::sleep(Duration::from_millis(100)).await;
+            }
+        });
+
+        let futures: Vec<Pin<Box<dyn Future<Output = ()>>>> = 
+            vec![Box::pin(tx1_fut), Box::pin(rx_fut), Box::pin(tx_fut)];
+
+        // trpl::join_all for same type
+        trpl::join_all(futures).await;
+    });
+
+    println!("-----------------");
+    trpl::run(async {
+        let a = async { 1u32 };
+        let b = async { "Hello, world!" };
+        let c = async { true };
+
+        // trpl::join! for different types
+        let (a_res, b_res, c_res) = trpl::join!(a, b, c);
+        println!("a: {}, b: {}, c: {}", a_res, b_res, c_res);
+    });
+
+    println!("-----------------");
+    trpl::run(async {
+        let slow = async {
+            trpl::sleep(Duration::from_secs(2)).await;
+            println!("slow");
+        };
+
+        let fast = async {
+            println!("fast");
+        };
+
+        trpl::race(slow, fast).await;
+    });
+
+    println!("-----------------");
+    trpl::run(async {
+        let one_ns = Duration::from_nanos(1);
+        let start = Instant::now();
+        async {
+            for _ in 1..1000 {
+                trpl::sleep(one_ns).await;
+            }
+        }.await;
+        let time = Instant::now() - start;
+        println!("Time taken: {:?}", time.as_secs_f32());
+
+        let start = Instant::now();
+        async {
+            for _ in 1..1000 {
+                trpl::yield_now().await;
+            }
+        }.await;
+        let time = Instant::now() - start;
+        println!("Time taken: {:?}", time.as_secs_f32());
+    });
+
+    println!("-----------------");
+    trpl::run(async {
+        let slow = async {
+            trpl::sleep(Duration::from_secs(2)).await;
+            println!("First task finished");
+        };
+
+        match timeout(slow, Duration::from_secs(1)).await {
+            Ok(message) => println!("Task finished: {:?}", message),
+            Err(duration) => println!("Task timed out after {:?}", duration.as_secs()),
+        }
+    });
+}
+
+async fn timeout<F: Future>(
+    future_to_try: F,
+    max_time: Duration,
+) -> Result<F::Output, Duration> {
+    match trpl::race(future_to_try, trpl::sleep(max_time)).await {
+        Either::Left(result) => Ok(result),
+        Either::Right(_) => Err(max_time),
+    }
 }
 
 async fn page_title(url: &str) -> Option<String> {
@@ -135,7 +245,7 @@ enum PageTitleFuture<'a> {
     TextAwaitPoint { response: trpl::Response },
 }
 
-enum Either<A, B> {
-    Left(A),
-    Right(B),
-}
+// enum Either<A, B> {
+//     Left(A),
+//     Right(B),
+// }
